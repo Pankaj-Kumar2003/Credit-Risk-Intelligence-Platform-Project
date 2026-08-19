@@ -1,86 +1,99 @@
 # Credit Risk Intelligence Platform
 
-An end-to-end machine learning platform that predicts loan-applicant default
-risk, explains every prediction, and monitors model health in production.
-Built to reflect how credit risk models are actually developed and deployed
-in banking and fintech, not a Kaggle notebook.
+This project is my end-to-end credit risk modeling portfolio project. I built
+it to go beyond a notebook and create a realistic ML system that follows the
+full lifecycle of a production credit model: ingesting raw applicant data,
+validating it, cleaning it, engineering risk features, training and comparing
+models, explaining prediction results, and monitoring whether the model still
+performs as the data changes over time.
+
+I wanted to understand how a credit decision system is designed in practice,
+where the model is only one part of the solution. The real value comes from
+clean data pipelines, business-aware features, explainability for stakeholders,
+and monitoring so a model does not silently drift after deployment.
+
+## My Project Goals
+
+- Build a complete machine learning workflow for credit default prediction.
+- Learn how data quality checks and schema validation impact model reliability.
+- Create business-relevant features such as debt-to-income ratios and utilization
+  metrics instead of only training on raw columns.
+- Compare multiple model families and track experiments with MLflow.
+- Add explainability so a prediction is not just a probability but something a
+  reviewer can interpret.
+- Explore production monitoring by checking for data drift over time.
+- Deliver an interactive interface for both API-based and dashboard-based access.
+
+## Learning Outcomes
+
+Through this project, I strengthened my understanding of:
+
+- end-to-end ML pipeline design from raw files to model inference
+- feature engineering for financial risk use cases
+- model evaluation with metrics that matter for imbalance-heavy lending data
+- SHAP-based explainability for stakeholder trust and model interpretation
+- data drift monitoring and why retraining decisions need to be data-driven
+- deployment patterns using FastAPI and Streamlit for model serving and review
 
 ## Business Problem
 
-Lenders need to decide, quickly and defensibly, whether an applicant is
-likely to default. Manual underwriting doesn't scale, black-box models don't
-survive a compliance review, and models that go stale silently cost money.
-This platform addresses all three: it predicts risk, explains *why*, and
-tells you when the data has drifted enough that the model needs a refresh.
+Lending institutions need a fast and defensible way to estimate whether a
+borrower is likely to default. In real scenarios, manual review is slow,
+black-box predictions are hard to explain, and stale models can create risk
+without any visible signal until losses begin to appear.
 
-**What it produces for each applicant:**
-- Default probability
-- Risk category (Low / Moderate / High / Very High)
-- SHAP-based explanation of the top drivers behind that score
+This project addresses that problem by combining prediction, interpretation, and
+monitoring in one system. A user can load applicant data, get a risk score,
+understand which factors are pushing the decision, and monitor whether the
+incoming data distribution has shifted enough to require review or retraining.
 
-## Architecture
+## Project Approach and Design Decisions
 
-```
-Data Sources (Home Credit / Lending Club / Give Me Some Credit — or the
-              included synthetic generator)
-   |
-   v
-Ingestion (src/ingestion) --------- column-mapping layer, dataset-agnostic
-   |
-   v
-Validation (src/validation) ------- schema checks + data quality checks
-   |
-   v
-Cleaning (src/preprocessing) ------ dedup, imputation, outlier capping
-   |
-   v
-Feature Engineering (src/features)  DTI, utilization, tenure, risk-history
-   |
-   v
-Train/Test Split + Encoding (src/preprocessing/preprocessing_pipeline.py)
-   |
-   v
-Model Training (src/training) ----- LogReg / RandomForest / XGBoost / LightGBM
-   |                                  tracked in MLflow
-   v
-Hyperparameter Tuning (src/tuning)  Optuna, logged as nested MLflow runs
-   |
-   v
-Evaluation (src/evaluation) ------- AUC, PR-AUC, calibration, lift/gain
-   |
-   v
-Explainability (src/explainability) SHAP global + local explanations
-   |
-   v
-   +-----------------+------------------+
-   |                                    |
-   v                                    v
-FastAPI (api/)                  Streamlit Dashboard (dashboard/)
-   |                                    |
-   +------------------+-----------------+
-                       v
-        Drift Monitoring (src/monitoring, Evidently AI)
-```
+I designed this project around a practical workflow rather than a toy example:
+
+- Data ingestion is configuration-driven so the pipeline can map source columns
+  to a canonical schema without hardcoding dataset-specific logic.
+- Schema validation and data checks run before training so bad inputs are caught
+  early.
+- Preprocessing and feature engineering are implemented as a reusable pipeline
+  instead of ad hoc transformations in one notebook.
+- Model training compares multiple algorithms and logs experiments to MLflow to
+  support reproducibility and comparison.
+- Hyperparameter search is included so model tuning is not left out of the
+  workflow.
+- Evaluation focuses on credit-relevant metrics such as ROC-AUC, PR-AUC, and
+  calibration-oriented monitoring.
+- SHAP explainability is added to show the top drivers behind individual
+  predictions.
+- A FastAPI service and Streamlit dashboard separate the serving layer from the
+  experimentation layer, which is closer to how ML products are built.
+- Drift monitoring is added as a production-minded safeguard against model
+  degradation in the field.
 
 ## Dataset
 
-The pipeline is dataset-agnostic by design: `config/config.yaml` maps
-canonical column names (`annual_income`, `credit_score`, `default_flag`, …)
-onto whatever the source file actually calls them. Point it at:
+The pipeline is intentionally dataset-agnostic: `config/config.yaml` maps
+canonical column names such as `annual_income`, `credit_score`, and
+`default_flag` to the actual names used by the source file. This lets the
+project work with different public credit datasets or a generated synthetic
+version when no external dataset is available.
+
+Possible data sources include:
 
 - [Home Credit Default Risk](https://www.kaggle.com/c/home-credit-default-risk)
 - [Lending Club Loan Data](https://www.kaggle.com/datasets/wordsforthewise/lending-club)
 - [Give Me Some Credit](https://www.kaggle.com/c/GiveMeSomeCredit)
 
-No dataset yet? Generate a realistic synthetic one:
+If a dataset is not available yet, this project can generate a realistic mock
+credit dataset:
 
 ```bash
 python scripts/generate_mock_data.py
 ```
 
-This writes `data/raw/loan_applications.csv` with the same schema the rest
-of the pipeline expects, including realistic missingness and a
-non-linearly-separable default signal.
+This creates `data/raw/loan_applications.csv` with the same schema expected by
+later stages, including realistic missing values and a non-trivial default
+signal.
 
 ## Installation
 
