@@ -1,0 +1,149 @@
+# ============================================================
+# Credit Risk Intelligence Platform — Configuration
+# All pipeline stages read from this file. No hardcoded paths
+# or column names should ever appear in src/.
+# ============================================================
+
+project:
+  name: "credit-risk-intelligence-platform"
+  version: "0.1.0"
+  random_seed: 42
+
+# ------------------------------------------------------------
+# Dataset column mapping. Swap this block to point the whole
+# pipeline at Home Credit, Lending Club, or Give Me Some Credit
+# without touching any source code.
+# ------------------------------------------------------------
+data:
+  raw_path: "data/raw/loan_applications.csv"
+  interim_path: "data/interim/loan_applications_clean.csv"
+  processed_path: "data/processed/loan_applications_features.csv"
+  train_path: "data/processed/train.csv"
+  test_path: "data/processed/test.csv"
+
+  target_column: "default_flag"          # 1 = defaulted, 0 = repaid
+  id_column: "applicant_id"
+
+  column_mapping:
+    applicant_id: "applicant_id"
+    annual_income: "annual_income"
+    loan_amount: "loan_amount"
+    credit_score: "credit_score"
+    employment_years: "employment_years"
+    age: "age"
+    existing_debt: "existing_debt"
+    credit_limit: "credit_limit"
+    num_open_accounts: "num_open_accounts"
+    num_credit_inquiries_6m: "num_credit_inquiries_6m"
+    num_previous_defaults: "num_previous_defaults"
+    delinquencies_2y: "delinquencies_2y"
+    loan_purpose: "loan_purpose"
+    home_ownership: "home_ownership"
+    application_date: "application_date"
+    account_open_date: "account_open_date"
+    default_flag: "default_flag"
+
+  categorical_features:
+    - "loan_purpose"
+    - "home_ownership"
+
+  numerical_features:
+    - "annual_income"
+    - "loan_amount"
+    - "credit_score"
+    - "employment_years"
+    - "age"
+    - "existing_debt"
+    - "credit_limit"
+    - "num_open_accounts"
+    - "num_credit_inquiries_6m"
+    - "num_previous_defaults"
+    - "delinquencies_2y"
+
+# ------------------------------------------------------------
+# Validation thresholds
+# ------------------------------------------------------------
+validation:
+  max_missing_fraction: 0.35
+  min_rows: 500
+  allowed_default_flag_values: [0, 1]
+
+# ------------------------------------------------------------
+# Preprocessing / feature engineering
+# ------------------------------------------------------------
+preprocessing:
+  test_size: 0.2
+  missing_numeric_strategy: "median"
+  missing_categorical_strategy: "most_frequent"
+  outlier_iqr_multiplier: 3.0
+  income_bins: [0, 30000, 60000, 100000, 150000, 1000000000]
+  income_bin_labels: ["very_low", "low", "medium", "high", "very_high"]
+
+# ------------------------------------------------------------
+# Training
+# ------------------------------------------------------------
+training:
+  cv_folds: 5
+  scoring_metric: "roc_auc"
+  models_dir: "models"
+  champion_model_path: "models/champion_model.pkl"
+  preprocessor_path: "models/preprocessor.pkl"
+  feature_names_path: "models/feature_names.json"
+
+logistic_regression:
+  max_iter: 1000
+  C: 1.0
+
+random_forest:
+  n_estimators: 300
+  max_depth: 10
+  min_samples_leaf: 5
+
+xgboost:
+  n_estimators: 400
+  max_depth: 5
+  learning_rate: 0.05
+  subsample: 0.8
+  colsample_bytree: 0.8
+
+lightgbm:
+  n_estimators: 400
+  max_depth: -1
+  num_leaves: 31
+  learning_rate: 0.05
+  subsample: 0.8
+  colsample_bytree: 0.8
+
+# ------------------------------------------------------------
+# Hyperparameter optimization (Optuna)
+# ------------------------------------------------------------
+tuning:
+  n_trials: 25
+  direction: "maximize"
+  metric: "roc_auc"
+
+# ------------------------------------------------------------
+# MLflow
+# ------------------------------------------------------------
+mlflow:
+  tracking_uri: "mlruns"
+  experiment_name: "credit-risk-intelligence-platform"
+  registered_model_name: "credit-risk-champion"
+
+# ------------------------------------------------------------
+# Monitoring
+# ------------------------------------------------------------
+monitoring:
+  reference_data_path: "data/processed/train.csv"
+  current_data_path: "data/processed/test.csv"
+  report_path: "reports/drift_report.html"
+
+# ------------------------------------------------------------
+# API / dashboard
+# ------------------------------------------------------------
+api:
+  host: "0.0.0.0"
+  port: 8000
+
+dashboard:
+  port: 8501
